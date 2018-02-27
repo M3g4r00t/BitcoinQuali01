@@ -4,7 +4,7 @@ import matplotlib
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.models import Sequential
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from pandas import read_csv
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
@@ -26,6 +26,20 @@ def scale(train, test):
     test = test.reshape(test.shape[0], test.shape[1])
     test_scaled = scaler.transform(test)
     return scaler, train_scaled, test_scaled
+
+
+# create a differenced series
+def difference(dataset, interval=1):
+    diff = list()
+    for i in range(interval, len(dataset)):
+        value = dataset[i] - dataset[i - interval]
+        diff.append(value)
+    return Series(diff)
+
+
+# invert differenced value
+def inverse_difference(history, yhat, interval=1):
+    return yhat + history[-interval]
 
 
 # fit an LSTM network to training data
@@ -52,6 +66,9 @@ def experiment(repeats, series, epochs):
     # split into input and outputs
     train_X, train_y = train[:, :-1], train[:, -1]
     test_X, test_y = test[:, :-1], test[:, -1]
+    # transform to be stationary
+    train_X = difference(train_X, 1)
+    test_X = difference(test_X, 1)
     # transform the scale of the data
     scaler, train_X, test_X = scale(train_X, test_X)
     # reshape input to be 3D [samples, timesteps, features]
